@@ -93,7 +93,8 @@ class MainWindow(QMainWindow):
         from PyQt5.QtWidgets import QTextEdit
 
         self.yaml_preview = QTextEdit()
-        self.yaml_preview.setReadOnly(True)
+        self.yaml_preview.setReadOnly(False)
+        self.yaml_preview.textChanged.connect(self.on_yaml_edited)
         layout.addWidget(QLabel("Live YAML Preview:"))
         layout.addWidget(self.yaml_preview)
 
@@ -256,3 +257,43 @@ class MainWindow(QMainWindow):
                     item_widget.setData(1, step)
                     self.step_list.addItem(item_widget)
         self.update_yaml()
+
+    def on_yaml_edited(self):
+        """
+        При редактировании YAML вручную синхронизируем список шагов и appId.
+        """
+        text = self.yaml_preview.toPlainText()
+        try:
+            docs = list(yaml.safe_load_all(text))
+            if not docs:
+                return
+
+            # Первый документ — appId
+            first_doc = docs[0]
+            if isinstance(first_doc, dict) and "appId" in first_doc:
+                self.app_id_input.blockSignals(True)
+                self.app_id_input.setText(first_doc["appId"])
+                self.app_id_input.blockSignals(False)
+
+            # Остальные документы — шаги
+            self.step_list.clear()
+            for doc in docs[1:]:
+                if isinstance(doc, list):
+                    for item in doc:
+                        if isinstance(item, dict):
+                            step = MaestroStep.from_dict(item)
+                        elif isinstance(item, str):
+                            step = MaestroStep(item, params={})
+                        else:
+                            continue
+                        item_widget = QListWidgetItem(step.display_name())
+                        item_widget.setData(1, step)
+                        self.step_list.addItem(item_widget)
+                elif isinstance(doc, dict):
+                    step = MaestroStep.from_dict(doc)
+                    item_widget = QListWidgetItem(step.display_name())
+                    item_widget.setData(1, step)
+                    self.step_list.addItem(item_widget)
+        except Exception:
+            # Ошибки синтаксиса YAML игнорируем временно
+            pass
