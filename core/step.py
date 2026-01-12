@@ -12,6 +12,22 @@ class MaestroStep:
 
         return {self.step_type: self.params}
 
+    def display_name(self):
+        """
+        Возвращает строку для отображения в списке шагов:
+        step_type (id=..., text=...)
+        """
+        if not self.params:
+            return self.step_type
+
+        parts = []
+        if "id" in self.params:
+            parts.append(f"id={self.params['id']}")
+        if "text" in self.params:
+            parts.append(f"text={self.params['text']}")
+
+        return f"{self.step_type} ({', '.join(parts)})"
+
     @staticmethod
     def from_dict(data: dict):
         step_type = list(data.keys())[0]

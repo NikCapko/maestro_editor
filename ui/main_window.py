@@ -58,6 +58,24 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Steps:"))
         layout.addWidget(self.step_list)
 
+        btn_layout = QHBoxLayout()
+        self.add_tap_btn = QPushButton("Add TapOn")
+        self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
+        btn_layout.addWidget(self.add_tap_btn)
+
+        self.add_input_btn = QPushButton("Add InputText")
+        self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
+        btn_layout.addWidget(self.add_input_btn)
+
+        self.add_assert_btn = QPushButton("Add assertVisible")
+        self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
+        btn_layout.addWidget(self.add_assert_btn)
+
+        self.add_launch_btn = QPushButton("Add launchApp")
+        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
+        btn_layout.addWidget(self.add_launch_btn)
+        layout.addLayout(btn_layout)
+
         # ==== Editor panel ====
         self.editor_widget = QWidget()
         self.editor_layout = QVBoxLayout()
@@ -88,22 +106,6 @@ class MainWindow(QMainWindow):
         self.save_btn = QPushButton("Save YAML")
         self.save_btn.clicked.connect(self.save_current_test)
         btn_layout.addWidget(self.save_btn)
-
-        self.add_tap_btn = QPushButton("Add TapOn")
-        self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
-        btn_layout.addWidget(self.add_tap_btn)
-
-        self.add_input_btn = QPushButton("Add InputText")
-        self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
-        btn_layout.addWidget(self.add_input_btn)
-
-        self.add_assert_btn = QPushButton("Add assertVisible")
-        self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
-        btn_layout.addWidget(self.add_assert_btn)
-
-        self.add_launch_btn = QPushButton("Add launchApp")
-        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
-        btn_layout.addWidget(self.add_launch_btn)
 
     # ==== Project methods ====
     def open_project(self):
@@ -150,7 +152,7 @@ class MainWindow(QMainWindow):
     # ==== Steps methods ====
     def add_step(self, step_type):
         step = MaestroStep(step_type, params={})
-        item = QListWidgetItem(step_type)
+        item = QListWidgetItem(step.display_name())
         item.setData(1, step)
         self.step_list.addItem(item)
         self.step_list.setCurrentItem(item)
@@ -177,6 +179,11 @@ class MainWindow(QMainWindow):
 
             def wrapped():
                 original_change()
+                # обновляем отображение шага в списке
+                current_item = self.step_list.currentItem()
+                if current_item:
+                    step = current_item.data(1)
+                    current_item.setText(step.display_name())
                 self.update_yaml()
 
             editor.on_change = wrapped
@@ -238,7 +245,7 @@ class MainWindow(QMainWindow):
                         step = MaestroStep(item, params={})
                     else:
                         continue
-                    item_widget = QListWidgetItem(step.step_type)
+                    item_widget = QListWidgetItem(step.display_name())
                     item_widget.setData(1, step)
                     self.step_list.addItem(item_widget)
         self.update_yaml()
