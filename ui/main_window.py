@@ -1,4 +1,4 @@
-import io
+import os
 
 import yaml
 from PyQt5.QtWidgets import (
@@ -6,126 +6,172 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from core.runner import MaestroRunner
+from core.step import MaestroStep
 from core.validator import StepValidator
 from core.yaml_service import save_maestro_yaml, steps_to_temp_yaml, yaml_to_steps
 from ui.step_editors.factory import StepEditorFactory
-from ui.step_list import StepListWidget
-from ui.widgets.log_view import LogView
-from ui.widgets.yaml_preview import YamlPreview
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Maestro GUI")
-        self.resize(1200, 700)
+        self.setWindowTitle("Maestro Test Editor")
+        self.resize(900, 600)
 
-        self.step_list = StepListWidget()
+        self.project_dir = None
+        self.tests_dir = None
+        self.current_test_name = None
 
-        self.editor_container = QWidget()
-        self.editor_layout = QVBoxLayout(self.editor_container)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        layout = QVBoxLayout()
+        self.central_widget.setLayout(layout)
 
-        self.yaml_preview = YamlPreview()
-
-        # Панель для appId
+        # ==== appId ====
         self.app_id_input = QLineEdit()
         self.app_id_input.setPlaceholderText("App ID (package)")
         self.app_id_input.textChanged.connect(self.update_yaml)
+        app_id_layout = QHBoxLayout()
+        app_id_layout.addWidget(QLabel("App ID:"))
+        app_id_layout.addWidget(self.app_id_input)
+        layout.addLayout(app_id_layout)
 
-        self.app_id_layout = QHBoxLayout()
-        self.app_id_layout.addWidget(QLabel("App ID:"))
-        self.app_id_layout.addWidget(self.app_id_input)
+        # ==== Список тестов ====
+        self.test_list_widget = QListWidget()
+        self.test_list_widget.itemClicked.connect(self.on_test_selected)
+        layout.addWidget(QLabel("Tests:"))
+        layout.addWidget(self.test_list_widget)
 
-        self.app_id = None
+        # ==== Список шагов ====
+        self.step_list = QListWidget()
+        self.step_list.itemClicked.connect(self.on_step_selected)
+        layout.addWidget(QLabel("Steps:"))
+        layout.addWidget(self.step_list)
 
-        self.add_launch_btn = QPushButton("Add launchApp")
-        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
+        # ==== Editor panel ====
+        self.editor_widget = QWidget()
+        self.editor_layout = QVBoxLayout()
+        self.editor_widget.setLayout(self.editor_layout)
+        layout.addWidget(QLabel("Step Editor:"))
+        layout.addWidget(self.editor_widget)
 
-        self.add_tap_btn = QPushButton("Add tapOn")
+        # ==== Live YAML preview ====
+        from PyQt5.QtWidgets import QTextEdit
+
+        self.yaml_preview = QTextEdit()
+        self.yaml_preview.setReadOnly(True)
+        layout.addWidget(QLabel("Live YAML Preview:"))
+        layout.addWidget(self.yaml_preview)
+
+        # ==== Buttons ====
+        btn_layout = QHBoxLayout()
+        layout.addLayout(btn_layout)
+
+        self.open_project_btn = QPushButton("Open Project")
+        self.open_project_btn.clicked.connect(self.open_project)
+        btn_layout.addWidget(self.open_project_btn)
+
+        self.new_test_btn = QPushButton("New Test")
+        self.new_test_btn.clicked.connect(self.new_test)
+        btn_layout.addWidget(self.new_test_btn)
+
+        self.save_btn = QPushButton("Save YAML")
+        self.save_btn.clicked.connect(self.save_current_test)
+        btn_layout.addWidget(self.save_btn)
+
+        self.add_tap_btn = QPushButton("Add TapOn")
         self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
+        btn_layout.addWidget(self.add_tap_btn)
 
-        self.open_btn = QPushButton("Open YAML")
-        self.open_btn.clicked.connect(self.open_yaml)
-
-        self.add_input_btn = QPushButton("Add inputText")
+        self.add_input_btn = QPushButton("Add InputText")
         self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
+        btn_layout.addWidget(self.add_input_btn)
 
         self.add_assert_btn = QPushButton("Add assertVisible")
         self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
+        btn_layout.addWidget(self.add_assert_btn)
 
-        self.step_list.currentRowChanged.connect(self.on_step_selected)
-        self.step_list.model().rowsMoved.connect(lambda *_: self.update_yaml())
+        self.add_launch_btn = QPushButton("Add launchApp")
+        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
+        btn_layout.addWidget(self.add_launch_btn)
 
-        splitter = QSplitter()
-        splitter.addWidget(self.step_list)
-        splitter.addWidget(self.editor_container)
-        splitter.addWidget(self.yaml_preview)
-        splitter.setSizes([200, 400, 400])
+    # ==== Project methods ====
+    def open_project(self):
+        project_dir = QFileDialog.getExistingDirectory(self, "Open Maestro Project")
+        if not project_dir:
+            return
 
-        layout = QVBoxLayout()
-        layout.addLayout(self.app_id_layout)
-        layout.addWidget(self.open_btn)
-        layout.addWidget(self.add_launch_btn)
-        layout.addWidget(self.add_tap_btn)
-        layout.addWidget(self.add_input_btn)
-        layout.addWidget(self.add_assert_btn)
-        layout.addWidget(splitter)
+        config_path = os.path.join(project_dir, "config.yaml")
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+                self.app_id_input.setText(config.get("appId", ""))
+        else:
+            self.app_id_input.setText("")
 
-        self.run_btn = QPushButton("Run Maestro")
-        self.run_btn.clicked.connect(self.run_maestro)
+        self.project_dir = project_dir
+        self.tests_dir = os.path.join(project_dir, "tests")
+        os.makedirs(self.tests_dir, exist_ok=True)
+        self.load_test_list()
 
-        self.save_btn = QPushButton("Save YAML")
-        self.save_btn.clicked.connect(self.save_yaml)
+    def load_test_list(self):
+        self.test_list_widget.clear()
+        if not self.tests_dir:
+            return
+        for file_name in sorted(os.listdir(self.tests_dir)):
+            if file_name.endswith((".yaml", ".yml")):
+                self.test_list_widget.addItem(file_name)
 
-        self.log_view = LogView()
-        layout.addWidget(self.run_btn)
-        layout.addWidget(self.save_btn)
-        layout.addWidget(self.log_view)
+    def on_test_selected(self, item: QListWidgetItem):
+        self.current_test_name = item.text()
+        path = os.path.join(self.tests_dir, self.current_test_name)
+        self.open_yaml(path)
 
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-
-    def add_step(self, step_type):
-        self.step_list.add_step(step_type)
+    def new_test(self):
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "New Test", self.tests_dir, "YAML Files (*.yaml *.yml)"
+        )
+        if not file_name:
+            return
+        self.current_test_name = os.path.basename(file_name)
+        self.step_list.clear()
         self.update_yaml()
 
-    def on_step_selected(self, index):
-        self.clear_editor()  # теперь безопасно
+    # ==== Steps methods ====
+    def add_step(self, step_type):
+        step = MaestroStep(step_type, params={})
+        item = QListWidgetItem(step_type)
+        item.setData(1, step)
+        self.step_list.addItem(item)
+        self.step_list.setCurrentItem(item)
+        self.update_yaml()
 
-        if index < 0:
-            return
-
-        step = self.step_list.steps[index]
-
-        if step.raw is not None:
-            # неподдерживаемый шаг
-            from PyQt5.QtWidgets import QLabel
-
-            self.editor_layout.addWidget(QLabel("Этот шаг пока не поддерживается"))
-            return
-
+    def on_step_selected(self, item):
+        self.clear_editor()
+        step = item.data(1)
         editor = StepEditorFactory.create(step)
         if editor:
             self.wrap_editor_with_update(editor)
             self.editor_layout.addWidget(editor)
-
         self.update_yaml()
 
+    def clear_editor(self):
+        for i in reversed(range(self.editor_layout.count())):
+            widget = self.editor_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
     def wrap_editor_with_update(self, editor):
-        """
-        Перехватываем изменения параметров шага
-        """
         if hasattr(editor, "on_change"):
             original_change = editor.on_change
 
@@ -135,113 +181,64 @@ class MainWindow(QMainWindow):
 
             editor.on_change = wrapped
 
+    # ==== YAML methods ====
     def update_yaml(self):
-        # берём текущее appId
-        self.app_id = self.app_id_input.text()
+        import io
 
-        # генерируем YAML в памяти для Live preview
         output = io.StringIO()
-
-        if self.app_id:
-            yaml.dump(
-                {"appId": self.app_id}, output, sort_keys=False, allow_unicode=True
-            )
+        app_id = self.app_id_input.text()
+        if app_id:
+            yaml.dump({"appId": app_id}, output, sort_keys=False, allow_unicode=True)
             output.write("---\n")
-
-        step_dicts = [step.to_dict() for step in self.step_list.steps]
-        yaml.dump(step_dicts, output, sort_keys=False, allow_unicode=True)
-
+        step_list = [
+            self.step_list.item(i).data(1).to_dict()
+            for i in range(self.step_list.count())
+        ]
+        yaml.dump(step_list, output, sort_keys=False, allow_unicode=True)
         self.yaml_preview.setPlainText(output.getvalue())
 
-    def run_maestro(self):
-        errors = StepValidator.validate(self.step_list.steps)
-
-        if errors:
-            self.log_view.clear()
-            self.log_view.append_line("❌ Validation errors:")
-
-            for err in errors:
-                self.log_view.append_line(str(err))
-
-            # self.step_list.mark_invalid_steps(errors)
-
-            return
-
-        yaml_path = steps_to_temp_yaml(self.step_list.steps, self.app_id)
-
-        self.log_view.clear()
-        self.log_view.append_line(f"Running: {yaml_path}")
-
-        self.runner = MaestroRunner(yaml_path)
-        self.runner.log.connect(self.log_view.append_line)
-        self.runner.finished.connect(self.on_run_finished)
-        self.runner.start()
-
-    def on_run_finished(self, code):
-        if code == 0:
-            self.log_view.append_line("✅ Finished successfully")
+    def save_current_test(self):
+        if not self.current_test_name:
+            file_name, _ = QFileDialog.getSaveFileName(
+                self, "Save Test", self.tests_dir, "YAML Files (*.yaml *.yml)"
+            )
+            if not file_name:
+                return
+            self.current_test_name = os.path.basename(file_name)
         else:
-            self.log_view.append_line(f"❌ Finished with code {code}")
+            file_name = os.path.join(self.tests_dir, self.current_test_name)
 
-    def open_yaml(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Maestro YAML", "", "YAML Files (*.yaml *.yml)"
-        )
-        if not path:
-            return
+        steps = [self.step_list.item(i).data(1) for i in range(self.step_list.count())]
+        save_maestro_yaml(file_name, self.app_id_input.text(), steps)
+        QMessageBox.information(self, "Saved", f"YAML сохранён: {file_name}")
 
+    def open_yaml(self, path):
         try:
             with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-            self.app_id, steps = yaml_to_steps(text)
-            self.app_id_input.setText(self.app_id or "")
-            self.load_steps(steps)
-
-        except Exception as e:
-            QMessageBox.critical(self, "YAML Import Error", str(e))
-
-    def load_steps(self, steps):
-        self.step_list.clear()
-        self.step_list.steps = []
-
-        for step in steps:
-            self.step_list.steps.append(step)
-
-            label = step.step_type
-            if step.raw is not None:
-                label += " (unsupported)"
-
-            item = QListWidgetItem(label)
-            item.setData(1, step)
-            self.step_list.addItem(item)
-
-        self.update_yaml()
-
-    def clear_editor(self):
-        """
-        Очищает правую панель редактора шагов
-        """
-        for i in reversed(range(self.editor_layout.count())):
-            widget = self.editor_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
-
-    def save_yaml(self):
-        # Запрос пути для сохранения
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save Maestro YAML", "", "YAML Files (*.yaml *.yml)"
-        )
-        if not path:
-            return
-
-        try:
-            # Берём appId из поля и список шагов
-            app_id = self.app_id_input.text()
-            steps = self.step_list.steps  # твой список шагов
-
-            save_maestro_yaml(path, app_id, steps)
-
-            QMessageBox.information(self, "Saved", f"YAML успешно сохранён: {path}")
-
+                docs = list(yaml.safe_load_all(f))
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+            return
+
+        # Первый документ — appId
+        first_doc = docs[0] if docs else {}
+        if isinstance(first_doc, dict) and "appId" in first_doc:
+            self.app_id_input.setText(first_doc["appId"])
+        else:
+            self.app_id_input.setText("")
+
+        # Остальные документы — шаги
+        self.step_list.clear()
+        for doc in docs[1:]:
+            if isinstance(doc, list):
+                for item in doc:
+                    if isinstance(item, dict):
+                        step = MaestroStep.from_dict(item)
+                    elif isinstance(item, str):
+                        step = MaestroStep(item, params={})
+                    else:
+                        continue
+                    item_widget = QListWidgetItem(step.step_type)
+                    item_widget.setData(1, step)
+                    self.step_list.addItem(item_widget)
+        self.update_yaml()
