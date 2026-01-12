@@ -11,28 +11,45 @@ def steps_to_yaml(steps):
     )
 
 
-def yaml_to_steps(text: str):
-    data = yaml.safe_load(text)
-
-    if not isinstance(data, list):
-        raise ValueError("Maestro YAML должен быть списком шагов")
-
+def yaml_to_steps(text):
     steps = []
-    for item in data:
-        if not isinstance(item, dict):
-            raise ValueError("Некорректный шаг в YAML")
-        steps.append(MaestroStep.from_dict(item))
+    docs = list(yaml.safe_load_all(text))
 
-    return steps
+    if not docs:
+        return None, steps
+
+    # Первый документ — appId
+    first_doc = docs[0]
+    app_id = first_doc.get("appId") if isinstance(first_doc, dict) else None
+
+    # Остальные документы — список шагов
+    for doc in docs[1:]:
+        if isinstance(doc, list):
+            for item in doc:
+                if isinstance(item, dict):
+                    steps.append(MaestroStep.from_dict(item))
+                elif isinstance(item, str):
+                    # простой шаг без параметров
+                    steps.append(MaestroStep(item, params={}))
+        elif isinstance(doc, dict):
+            steps.append(MaestroStep.from_dict(doc))
+        elif isinstance(doc, str):
+            steps.append(MaestroStep(doc, params={}))
+
+    return app_id, steps
 
 
-def steps_to_temp_yaml(steps):
-    data = [step.to_dict() for step in steps]
-
+def steps_to_temp_yaml(steps, app_id=None):
     tmp = tempfile.NamedTemporaryFile(
         mode="w", suffix=".yaml", delete=False, encoding="utf-8"
     )
 
-    yaml.dump(data, tmp, sort_keys=False, allow_unicode=True)
+    if app_id:
+        yaml.dump({"appId": app_id}, tmp, sort_keys=False)
+        tmp.write("---\n")
+
+    step_list = [step.to_dict() for step in steps]
+    yaml.dump(step_list, tmp, sort_keys=False)
+
     tmp.close()
     return tmp.name

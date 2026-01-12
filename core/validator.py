@@ -23,4 +23,10 @@ class StepValidator:
                 if not any(k in step.params for k in ("id", "text")):
                     errors.append(ValidationError(i, "inputText требует цель (id)"))
 
+            if step.step_type == "assertVisible":
+                if "id" not in step.params or not step.params["id"]:
+                    errors.append(
+                        ValidationError(i, "assertVisible требует указать id элемента")
+                    )
+
         return errors
