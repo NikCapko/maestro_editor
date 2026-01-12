@@ -1,4 +1,5 @@
 from ui.step_editors.assert_visible import AssertVisibleEditor
+from ui.step_editors.back import BackEditor
 from ui.step_editors.input_text import InputTextEditor
 from ui.step_editors.launch_app import LaunchAppEditor
 from ui.step_editors.run_flow import RunFlowEditor
@@ -18,4 +19,6 @@ class StepEditorFactory:
             return AssertVisibleEditor(step)
         if step.step_type == "runFlow":
             return RunFlowEditor(step, project_dir)
+        if step.step_type == "back":
+            return BackEditor(step)
         return None

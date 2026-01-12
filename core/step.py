@@ -33,7 +33,13 @@ class MaestroStep:
         params = data[step_type]
 
         # поддерживаемые шаги
-        supported = step_type in ("tapOn", "inputText", "launchApp", "assertVisible")
+        supported = step_type in (
+            "tapOn",
+            "inputText",
+            "launchApp",
+            "assertVisible",
+            "back",
+        )
 
         if supported:
             return MaestroStep(

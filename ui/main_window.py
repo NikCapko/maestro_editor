@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
 from core.runner import MaestroRunner
 from core.step import MaestroStep
 from core.validator import StepValidator
-from core.yaml_service import save_maestro_yaml, steps_to_temp_yaml
+from core.yaml_service import save_maestro_yaml
 from ui.step_editors.factory import StepEditorFactory
 from ui.widgets.log_view import LogView
 
@@ -81,6 +81,10 @@ class MainWindow(QMainWindow):
         self.add_assert_btn = QPushButton("Add assertVisible")
         self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
         btn_layout.addWidget(self.add_assert_btn)
+
+        self.add_back_btn = QPushButton("Add back")
+        self.add_back_btn.clicked.connect(lambda: self.add_step("back"))
+        btn_layout.addWidget(self.add_back_btn)
 
         self.delete_step_btn = QPushButton("Delete step")
         self.delete_step_btn.setEnabled(False)
