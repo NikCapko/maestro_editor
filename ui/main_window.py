@@ -82,6 +82,11 @@ class MainWindow(QMainWindow):
         self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
         btn_layout.addWidget(self.add_assert_btn)
 
+        self.delete_step_btn = QPushButton("Delete step")
+        self.delete_step_btn.setEnabled(False)
+        self.delete_step_btn.clicked.connect(self.delete_selected_step)
+        btn_layout.addWidget(self.delete_step_btn)
+
         layout.addLayout(btn_layout)
 
         # ==== Editor panel ====
@@ -98,8 +103,9 @@ class MainWindow(QMainWindow):
         # ==== Live YAML preview ====
 
         self.yaml_preview = QTextEdit()
-        self.yaml_preview.setReadOnly(False)
-        self.yaml_preview.textChanged.connect(self.on_yaml_edited)
+        self.yaml_preview.setReadOnly(True)
+        # self.yaml_preview.setReadOnly(False)
+        # self.yaml_preview.textChanged.connect(self.on_yaml_edited)
         layout.addWidget(QLabel("Live YAML Preview:"))
         layout.addWidget(self.yaml_preview)
 
@@ -173,6 +179,7 @@ class MainWindow(QMainWindow):
         item.setData(1, step)
         self.step_list.addItem(item)
         self.step_list.setCurrentItem(item)
+        self.on_step_selected(item)
         self.update_yaml()
 
     def on_step_selected(self, item):
@@ -182,6 +189,7 @@ class MainWindow(QMainWindow):
         if editor:
             self.wrap_editor_with_update(editor)
             self.editor_layout.addWidget(editor)
+        self.delete_step_btn.setEnabled(True)
         self.update_yaml()
 
     def clear_editor(self):
@@ -189,9 +197,40 @@ class MainWindow(QMainWindow):
             widget = self.editor_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
+        self.delete_step_btn.setEnabled(False)
+
+    def delete_selected_step(self):
+        row = self.step_list.currentRow()
+        if row < 0:
+            return
+
+        self.step_list.takeItem(row)
+
+        count = self.step_list.count()
+
+        if count == 0:
+            # шагов больше нет
+            self.clear_editor()
+            self.clear_runflow_preview()
+            self.delete_step_btn.setEnabled(False)
+            self.update_yaml()
+            return
+
+        # выбираем новый активный шаг
+        if row < count:
+            new_row = row
+        else:
+            new_row = count - 1
+
+        self.step_list.setCurrentRow(new_row)
+        item = self.step_list.currentItem()
+        if item:
+            self.on_step_selected(item)
+
+        self.update_yaml()
 
     def wrap_editor_with_update(self, editor):
-        if hasattr(editor, "on_change"):
+        try:
             original_change = editor.on_change
 
             def wrapped():
@@ -204,6 +243,8 @@ class MainWindow(QMainWindow):
                 self.update_yaml()
 
             editor.on_change = wrapped
+        except Exception as e:
+            pass
 
     # ==== YAML methods ====
     def update_yaml(self):
@@ -221,7 +262,7 @@ class MainWindow(QMainWindow):
         yaml.dump(step_list, output, sort_keys=False, allow_unicode=True)
         self.yaml_preview.setPlainText(output.getvalue())
 
-    def save_current_test(self):
+    def save_current_test(self, show_message: bool = True):
         if not self.current_test_name:
             file_name, _ = QFileDialog.getSaveFileName(
                 self, "Save Test", self.tests_dir, "YAML Files (*.yaml *.yml)"
@@ -234,7 +275,8 @@ class MainWindow(QMainWindow):
 
         steps = [self.step_list.item(i).data(1) for i in range(self.step_list.count())]
         save_maestro_yaml(file_name, self.app_id_input.text(), steps)
-        QMessageBox.information(self, "Saved", f"YAML сохранён: {file_name}")
+        if show_message:
+            QMessageBox.information(self, "Saved", f"YAML сохранён: {file_name}")
 
     def open_yaml(self, path):
         try:
@@ -332,7 +374,7 @@ class MainWindow(QMainWindow):
             return
 
         # 2️⃣ Сохраняем текущий тест перед запуском
-        self.save_current_test()
+        self.save_current_test(False)
 
         # 3️⃣ Запускаем АКТИВНЫЙ файл
         yaml_path = os.path.join(self.tests_dir, self.current_test_name)
