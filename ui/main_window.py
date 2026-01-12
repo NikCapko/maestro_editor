@@ -1,8 +1,10 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QSplitter, QVBoxLayout, QWidget
 
-from core.yaml_service import steps_to_yaml
+from core.runner import MaestroRunner
+from core.yaml_service import steps_to_temp_yaml, steps_to_yaml
 from ui.step_editors.factory import StepEditorFactory
 from ui.step_list import StepListWidget
+from ui.widgets.log_view import LogView
 from ui.widgets.yaml_preview import YamlPreview
 
 
@@ -34,6 +36,13 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(self.add_tap_btn)
         layout.addWidget(splitter)
+
+        self.run_btn = QPushButton("Run Maestro")
+        self.run_btn.clicked.connect(self.run_maestro)
+
+        self.log_view = LogView()
+        layout.addWidget(self.run_btn)
+        layout.addWidget(self.log_view)
 
         container = QWidget()
         container.setLayout(layout)
@@ -79,3 +88,24 @@ class MainWindow(QMainWindow):
     def update_yaml(self):
         yaml_text = steps_to_yaml(self.step_list.steps)
         self.yaml_preview.setPlainText(yaml_text)
+
+    def run_maestro(self):
+        if not self.step_list.steps:
+            self.log_view.append_line("No steps to run")
+            return
+
+        yaml_path = steps_to_temp_yaml(self.step_list.steps)
+
+        self.log_view.clear()
+        self.log_view.append_line(f"Running: {yaml_path}")
+
+        self.runner = MaestroRunner(yaml_path)
+        self.runner.log.connect(self.log_view.append_line)
+        self.runner.finished.connect(self.on_run_finished)
+        self.runner.start()
+
+    def on_run_finished(self, code):
+        if code == 0:
+            self.log_view.append_line("✅ Finished successfully")
+        else:
+            self.log_view.append_line(f"❌ Finished with code {code}")

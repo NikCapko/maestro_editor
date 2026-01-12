@@ -8,3 +8,4 @@ class LogView(QTextEdit):
 
     def append_line(self, text):
         self.append(text)
+        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
