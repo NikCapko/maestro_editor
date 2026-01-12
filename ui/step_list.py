@@ -1,3 +1,4 @@
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 
 from core.step import MaestroStep
@@ -18,6 +19,13 @@ class StepListWidget(QListWidget):
         self.addItem(item)
 
         self.setCurrentRow(len(self.steps) - 1)
+
+    # def mark_invalid_steps(self, errors):
+    # for i in range(self.count()):
+    #    self.item(i).setBackground(None)
+
+    # for err in errors:
+    #    self.item(err.step_index).setBackground(QColor.red)
 
     def dropEvent(self, event):
         super().dropEvent(event)

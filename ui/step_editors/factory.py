@@ -9,5 +9,4 @@ class StepEditorFactory:
             return TapOnEditor(step)
         if step.step_type == "inputText":
             return InputTextEditor(step)
-
         return None

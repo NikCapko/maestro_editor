@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QSplitter, QVBoxLayout, QWidget
 
 from core.runner import MaestroRunner
+from core.validator import StepValidator
 from core.yaml_service import steps_to_temp_yaml, steps_to_yaml
 from ui.step_editors.factory import StepEditorFactory
 from ui.step_list import StepListWidget
@@ -24,6 +25,9 @@ class MainWindow(QMainWindow):
         self.add_tap_btn = QPushButton("Add tapOn")
         self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
 
+        self.add_input_btn = QPushButton("Add inputText")
+        self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
+
         self.step_list.currentRowChanged.connect(self.on_step_selected)
         self.step_list.model().rowsMoved.connect(lambda *_: self.update_yaml())
 
@@ -35,6 +39,7 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         layout.addWidget(self.add_tap_btn)
+        layout.addWidget(self.add_input_btn)
         layout.addWidget(splitter)
 
         self.run_btn = QPushButton("Run Maestro")
@@ -90,8 +95,17 @@ class MainWindow(QMainWindow):
         self.yaml_preview.setPlainText(yaml_text)
 
     def run_maestro(self):
-        if not self.step_list.steps:
-            self.log_view.append_line("No steps to run")
+        errors = StepValidator.validate(self.step_list.steps)
+
+        if errors:
+            self.log_view.clear()
+            self.log_view.append_line("❌ Validation errors:")
+
+            for err in errors:
+                self.log_view.append_line(str(err))
+
+            # self.step_list.mark_invalid_steps(errors)
+
             return
 
         yaml_path = steps_to_temp_yaml(self.step_list.steps)

@@ -6,25 +6,25 @@ class InputTextEditor(QWidget):
         super().__init__()
         self.step = step
 
-        self.target_input = QLineEdit()
-        self.text_input = QLineEdit()
+        self.target_id = QLineEdit()
+        self.input_text = QLineEdit()
 
-        self.target_input.setText(step.params.get("id", ""))
-        self.text_input.setText(step.params.get("text", ""))
+        self.target_id.setText(step.params.get("id", ""))
+        self.input_text.setText(step.params.get("text", ""))
 
-        self.target_input.textChanged.connect(self.on_change)
-        self.text_input.textChanged.connect(self.on_change)
+        self.target_id.textChanged.connect(self.on_change)
+        self.input_text.textChanged.connect(self.on_change)
 
         layout = QFormLayout()
-        layout.addRow("Target ID:", self.target_input)
-        layout.addRow("Text:", self.text_input)
+        layout.addRow("Target ID:", self.target_id)
+        layout.addRow("Text:", self.input_text)
         self.setLayout(layout)
 
     def on_change(self):
         self.step.params.clear()
 
-        if self.target_input.text():
-            self.step.params["id"] = self.target_input.text()
+        if self.target_id.text():
+            self.step.params["id"] = self.target_id.text()
 
-        if self.text_input.text():
-            self.step.params["text"] = self.text_input.text()
+        if self.input_text.text():
+            self.step.params["text"] = self.input_text.text()
