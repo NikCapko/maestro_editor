@@ -13,10 +13,9 @@ class MaestroStep:
         return {self.step_type: self.params}
 
     def display_name(self):
-        """
-        Возвращает строку для отображения в списке шагов:
-        step_type (id=..., text=...)
-        """
+        if self.step_type == "runFlow":
+            return f"runFlow ({self.params.get('file', '')})"
+
         if not self.params:
             return self.step_type
 

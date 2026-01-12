@@ -59,6 +59,15 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.step_list)
 
         btn_layout = QHBoxLayout()
+
+        self.add_launch_btn = QPushButton("Add launchApp")
+        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
+        btn_layout.addWidget(self.add_launch_btn)
+
+        self.add_runflow_btn = QPushButton("Add runFlow")
+        self.add_runflow_btn.clicked.connect(lambda: self.add_step("runFlow"))
+        btn_layout.addWidget(self.add_runflow_btn)
+
         self.add_tap_btn = QPushButton("Add TapOn")
         self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
         btn_layout.addWidget(self.add_tap_btn)
@@ -71,9 +80,6 @@ class MainWindow(QMainWindow):
         self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
         btn_layout.addWidget(self.add_assert_btn)
 
-        self.add_launch_btn = QPushButton("Add launchApp")
-        self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
-        btn_layout.addWidget(self.add_launch_btn)
         layout.addLayout(btn_layout)
 
         # ==== Editor panel ====
@@ -128,11 +134,12 @@ class MainWindow(QMainWindow):
 
     def load_test_list(self):
         self.test_list_widget.clear()
-        if not self.tests_dir:
-            return
-        for file_name in sorted(os.listdir(self.tests_dir)):
-            if file_name.endswith((".yaml", ".yml")):
-                self.test_list_widget.addItem(file_name)
+        for root, _, files in os.walk(self.tests_dir):
+            for file in files:
+                if file.endswith((".yaml", ".yml")):
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, self.tests_dir)
+                    self.test_list_widget.addItem(rel_path)
 
     def on_test_selected(self, item: QListWidgetItem):
         self.current_test_name = item.text()
@@ -161,7 +168,7 @@ class MainWindow(QMainWindow):
     def on_step_selected(self, item):
         self.clear_editor()
         step = item.data(1)
-        editor = StepEditorFactory.create(step)
+        editor = StepEditorFactory.create(step, self.project_dir)
         if editor:
             self.wrap_editor_with_update(editor)
             self.editor_layout.addWidget(editor)

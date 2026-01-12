@@ -28,5 +28,8 @@ class StepValidator:
                     errors.append(
                         ValidationError(i, "assertVisible требует указать id или text")
                     )
+            if step.step_type == "runFlow":
+                if not step.params.get("file"):
+                    errors.append(ValidationError(i, "runFlow требует указать file"))
 
         return errors
