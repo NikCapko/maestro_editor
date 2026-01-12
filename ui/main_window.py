@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -18,8 +19,9 @@ from PyQt5.QtWidgets import (
 from core.runner import MaestroRunner
 from core.step import MaestroStep
 from core.validator import StepValidator
-from core.yaml_service import save_maestro_yaml, steps_to_temp_yaml, yaml_to_steps
+from core.yaml_service import save_maestro_yaml, steps_to_temp_yaml
 from ui.step_editors.factory import StepEditorFactory
+from ui.widgets.log_view import LogView
 
 
 class MainWindow(QMainWindow):
@@ -89,8 +91,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Step Editor:"))
         layout.addWidget(self.editor_widget)
 
+        self.run_btn = QPushButton("Run Maestro")
+        self.run_btn.clicked.connect(self.run_maestro)
+        layout.addWidget(self.run_btn)
+
         # ==== Live YAML preview ====
-        from PyQt5.QtWidgets import QTextEdit
 
         self.yaml_preview = QTextEdit()
         self.yaml_preview.setReadOnly(False)
@@ -113,6 +118,10 @@ class MainWindow(QMainWindow):
         self.save_btn = QPushButton("Save YAML")
         self.save_btn.clicked.connect(self.save_current_test)
         btn_layout.addWidget(self.save_btn)
+
+        self.log_view = LogView()
+        layout.addWidget(QLabel("Maestro output:"))
+        layout.addWidget(self.log_view)
 
     # ==== Project methods ====
     def open_project(self):
@@ -297,3 +306,48 @@ class MainWindow(QMainWindow):
         except Exception:
             # Ошибки синтаксиса YAML игнорируем временно
             pass
+
+    def get_steps(self):
+        steps = []
+        for i in range(self.step_list.count()):
+            steps.append(self.step_list.item(i).data(1))
+        return steps
+
+    def run_maestro(self):
+        if not self.current_test_name:
+            QMessageBox.warning(self, "Run", "Test file is not selected")
+            return
+
+        steps = self.get_steps()
+
+        # 1️⃣ Валидация шагов
+        errors = StepValidator.validate(steps)
+
+        self.log_view.clear()
+
+        if errors:
+            self.log_view.append_line("❌ Validation errors:")
+            for err in errors:
+                self.log_view.append_line(str(err))
+            return
+
+        # 2️⃣ Сохраняем текущий тест перед запуском
+        self.save_current_test()
+
+        # 3️⃣ Запускаем АКТИВНЫЙ файл
+        yaml_path = os.path.join(self.tests_dir, self.current_test_name)
+
+        self.log_view.append_line("▶ Running Maestro")
+        self.log_view.append_line(f"File: {self.current_test_name}")
+
+        self.runner = MaestroRunner(yaml_path=yaml_path)
+
+        self.runner.log.connect(self.log_view.append_line)
+        self.runner.finished.connect(self.on_run_finished)
+        self.runner.start()
+
+    def on_run_finished(self, code):
+        if code == 0:
+            self.log_view.append_line("✅ Finished successfully")
+        else:
+            self.log_view.append_line(f"❌ Finished with code {code}")

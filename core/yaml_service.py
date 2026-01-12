@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import yaml
@@ -39,20 +40,33 @@ def yaml_to_steps(text):
     return app_id, steps
 
 
-def steps_to_temp_yaml(steps, app_id=None):
-    tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-    )
+def steps_to_temp_yaml(steps, app_id, project_dir):
+    fd, path = tempfile.mkstemp(suffix=".yaml")
+    os.close(fd)
 
+    documents = []
+
+    # 1️⃣ appId как первый документ
     if app_id:
-        yaml.dump({"appId": app_id}, tmp, sort_keys=False)
-        tmp.write("---\n")
+        documents.append({"appId": app_id})
 
-    step_list = [step.to_dict() for step in steps]
-    yaml.dump(step_list, tmp, sort_keys=False, allow_unicode=True)
+    # 2️⃣ список шагов как ВТОРОЙ документ
+    step_docs = []
+    for step in steps:
+        step_docs.append(step.to_dict())
 
-    tmp.close()
-    return tmp.name
+    documents.append(step_docs)
+
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump_all(
+            documents,
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+            explicit_start=False,  # важно!
+        )
+
+    return path
 
 
 def save_maestro_yaml(file_path: str, app_id: str, steps: list):

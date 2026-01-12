@@ -6,6 +6,10 @@ class LogView(QTextEdit):
         super().__init__()
         self.setReadOnly(True)
 
-    def append_line(self, text):
+    # def append_line(self, text):
+    #    self.append(text)
+    #    self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
+
+    def append_line(self, text: str):
         self.append(text)
-        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
+        self.moveCursor(self.textCursor().End)
