@@ -2,6 +2,8 @@ import tempfile
 
 import yaml
 
+from core.step import MaestroStep
+
 
 def steps_to_yaml(steps):
     return yaml.dump(
@@ -9,9 +11,19 @@ def steps_to_yaml(steps):
     )
 
 
-def yaml_to_steps(text):
-    data = yaml.safe_load(text) or []
-    return [MaestroStep.from_dict(item) for item in data]
+def yaml_to_steps(text: str):
+    data = yaml.safe_load(text)
+
+    if not isinstance(data, list):
+        raise ValueError("Maestro YAML должен быть списком шагов")
+
+    steps = []
+    for item in data:
+        if not isinstance(item, dict):
+            raise ValueError("Некорректный шаг в YAML")
+        steps.append(MaestroStep.from_dict(item))
+
+    return steps
 
 
 def steps_to_temp_yaml(steps):

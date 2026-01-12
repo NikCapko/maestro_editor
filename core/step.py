@@ -9,4 +9,12 @@ class MaestroStep:
     @staticmethod
     def from_dict(data: dict):
         step_type = list(data.keys())[0]
-        return MaestroStep(step_type, data[step_type])
+        params = data[step_type]
+
+        supported = step_type in ("tapOn", "inputText")
+
+        if supported:
+            return MaestroStep(step_type, params=params)
+        else:
+            # неподдерживаемый шаг
+            return MaestroStep(step_type, raw=data)

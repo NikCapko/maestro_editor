@@ -1,8 +1,16 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QSplitter, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.runner import MaestroRunner
 from core.validator import StepValidator
-from core.yaml_service import steps_to_temp_yaml, steps_to_yaml
+from core.yaml_service import steps_to_temp_yaml, steps_to_yaml, yaml_to_steps
 from ui.step_editors.factory import StepEditorFactory
 from ui.step_list import StepListWidget
 from ui.widgets.log_view import LogView
@@ -25,6 +33,9 @@ class MainWindow(QMainWindow):
         self.add_tap_btn = QPushButton("Add tapOn")
         self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
 
+        self.open_btn = QPushButton("Open YAML")
+        self.open_btn.clicked.connect(self.open_yaml)
+
         self.add_input_btn = QPushButton("Add inputText")
         self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
 
@@ -38,6 +49,7 @@ class MainWindow(QMainWindow):
         splitter.setSizes([200, 400, 400])
 
         layout = QVBoxLayout()
+        layout.addWidget(self.open_btn)
         layout.addWidget(self.add_tap_btn)
         layout.addWidget(self.add_input_btn)
         layout.addWidget(splitter)
@@ -58,22 +70,20 @@ class MainWindow(QMainWindow):
         self.update_yaml()
 
     def on_step_selected(self, index):
-        # очистка редактора
-        for i in reversed(range(self.editor_layout.count())):
-            widget = self.editor_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+        self.clear_editor()
 
         if index < 0:
             return
 
         step = self.step_list.steps[index]
+
+        if step.raw is not None:
+            self.editor_layout.addWidget(QLabel("Этот шаг пока не поддерживается"))
+            return
+
         editor = StepEditorFactory.create(step)
-
         if editor:
-            # 🔹 КЛЮЧЕВОЙ МОМЕНТ
             self.wrap_editor_with_update(editor)
-
             self.editor_layout.addWidget(editor)
 
         self.update_yaml()
@@ -123,3 +133,40 @@ class MainWindow(QMainWindow):
             self.log_view.append_line("✅ Finished successfully")
         else:
             self.log_view.append_line(f"❌ Finished with code {code}")
+
+    def open_yaml(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open Maestro YAML", "", "YAML Files (*.yaml *.yml)"
+        )
+
+        if not path:
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+
+            steps = yaml_to_steps(text)
+
+        except Exception as e:
+            QMessageBox.critical(self, "YAML Import Error", str(e))
+            return
+
+        self.load_steps(steps)
+
+    def load_steps(self, steps):
+        self.step_list.clear()
+        self.step_list.steps = []
+
+        for step in steps:
+            self.step_list.steps.append(step)
+
+            label = step.step_type
+            if step.raw is not None:
+                label += " (unsupported)"
+
+            item = QListWidgetItem(label)
+            item.setData(1, step)
+            self.step_list.addItem(item)
+
+        self.update_yaml()
