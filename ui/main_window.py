@@ -16,9 +16,8 @@ from PyQt5.QtWidgets import (
 )
 
 from core.runner import MaestroRunner
-from core.step import MaestroStep
 from core.validator import StepValidator
-from core.yaml_service import steps_to_temp_yaml, steps_to_yaml, yaml_to_steps
+from core.yaml_service import save_maestro_yaml, steps_to_temp_yaml, yaml_to_steps
 from ui.step_editors.factory import StepEditorFactory
 from ui.step_list import StepListWidget
 from ui.widgets.log_view import LogView
@@ -85,8 +84,12 @@ class MainWindow(QMainWindow):
         self.run_btn = QPushButton("Run Maestro")
         self.run_btn.clicked.connect(self.run_maestro)
 
+        self.save_btn = QPushButton("Save YAML")
+        self.save_btn.clicked.connect(self.save_yaml)
+
         self.log_view = LogView()
         layout.addWidget(self.run_btn)
+        layout.addWidget(self.save_btn)
         layout.addWidget(self.log_view)
 
         container = QWidget()
@@ -222,3 +225,23 @@ class MainWindow(QMainWindow):
             widget = self.editor_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
+
+    def save_yaml(self):
+        # Запрос пути для сохранения
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Maestro YAML", "", "YAML Files (*.yaml *.yml)"
+        )
+        if not path:
+            return
+
+        try:
+            # Берём appId из поля и список шагов
+            app_id = self.app_id_input.text()
+            steps = self.step_list.steps  # твой список шагов
+
+            save_maestro_yaml(path, app_id, steps)
+
+            QMessageBox.information(self, "Saved", f"YAML успешно сохранён: {path}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))

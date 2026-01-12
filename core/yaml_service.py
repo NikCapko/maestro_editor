@@ -53,3 +53,15 @@ def steps_to_temp_yaml(steps, app_id=None):
 
     tmp.close()
     return tmp.name
+
+
+def save_maestro_yaml(file_path: str, app_id: str, steps: list):
+    with open(file_path, "w", encoding="utf-8") as f:
+        # Первый документ — appId
+        if app_id:
+            yaml.dump({"appId": app_id}, f, sort_keys=False, allow_unicode=True)
+            f.write("---\n")
+
+        # Второй документ — шаги
+        step_list = [step.to_dict() for step in steps]
+        yaml.dump(step_list, f, sort_keys=False, allow_unicode=True)
