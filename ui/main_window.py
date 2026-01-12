@@ -140,11 +140,13 @@ class MainWindow(QMainWindow):
         output = io.StringIO()
 
         if self.app_id:
-            yaml.dump({"appId": self.app_id}, output, sort_keys=False)
+            yaml.dump(
+                {"appId": self.app_id}, output, sort_keys=False, allow_unicode=True
+            )
             output.write("---\n")
 
         step_dicts = [step.to_dict() for step in self.step_list.steps]
-        yaml.dump(step_dicts, output, sort_keys=False)
+        yaml.dump(step_dicts, output, sort_keys=False, allow_unicode=True)
 
         self.yaml_preview.setPlainText(output.getvalue())
 

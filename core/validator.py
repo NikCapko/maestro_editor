@@ -24,9 +24,9 @@ class StepValidator:
                     errors.append(ValidationError(i, "inputText требует цель (id)"))
 
             if step.step_type == "assertVisible":
-                if "id" not in step.params or not step.params["id"]:
+                if not step.params.get("id") and not step.params.get("text"):
                     errors.append(
-                        ValidationError(i, "assertVisible требует указать id элемента")
+                        ValidationError(i, "assertVisible требует указать id или text")
                     )
 
         return errors

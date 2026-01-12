@@ -49,7 +49,7 @@ def steps_to_temp_yaml(steps, app_id=None):
         tmp.write("---\n")
 
     step_list = [step.to_dict() for step in steps]
-    yaml.dump(step_list, tmp, sort_keys=False)
+    yaml.dump(step_list, tmp, sort_keys=False, allow_unicode=True)
 
     tmp.close()
     return tmp.name
