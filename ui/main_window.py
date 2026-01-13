@@ -2,6 +2,7 @@ import os
 
 import yaml
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -59,11 +60,13 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         layout.addLayout(btn_layout)
 
-        self.open_project_btn = QPushButton("\uf07b  Open Project")
+        self.open_project_btn = QPushButton(" Open Project")
+        self.open_project_btn.setIcon(self.icon("folder-open.svg"))
         self.open_project_btn.clicked.connect(self.open_project)
         btn_layout.addWidget(self.open_project_btn)
 
-        self.new_test_btn = QPushButton("\uf542  New Test")
+        self.new_test_btn = QPushButton(" New Test")
+        self.new_test_btn.setIcon(self.icon("file.svg"))
         self.new_test_btn.clicked.connect(self.new_test)
         btn_layout.addWidget(self.new_test_btn)
 
@@ -71,7 +74,8 @@ class MainWindow(QMainWindow):
         self.delete_test_btn.clicked.connect(self.delete_test)
         btn_layout.addWidget(self.delete_test_btn)
 
-        self.save_btn = QPushButton("\uf0c7  Save YAML")
+        self.save_btn = QPushButton(" Save YAML")
+        self.save_btn.setIcon(self.icon("floppy-disk.svg"))
         self.save_btn.clicked.connect(self.save_current_test)
         btn_layout.addWidget(self.save_btn)
 
@@ -92,19 +96,23 @@ class MainWindow(QMainWindow):
         self.add_runflow_btn.clicked.connect(lambda: self.add_step("runFlow"))
         btn_layout.addWidget(self.add_runflow_btn)
 
-        self.add_tap_btn = QPushButton("\uf25a  Add TapOn")
+        self.add_tap_btn = QPushButton(" Add TapOn")
+        self.add_tap_btn.setIcon(self.icon("hand-pointer.svg"))
         self.add_tap_btn.clicked.connect(lambda: self.add_step("tapOn"))
         btn_layout.addWidget(self.add_tap_btn)
 
-        self.add_input_btn = QPushButton("Add InputText")
+        self.add_input_btn = QPushButton(" Add InputText")
+        self.add_input_btn.setIcon(self.icon("keyboard.svg"))
         self.add_input_btn.clicked.connect(lambda: self.add_step("inputText"))
         btn_layout.addWidget(self.add_input_btn)
 
-        self.add_assert_btn = QPushButton("\uf06e  Add assertVisible")
+        self.add_assert_btn = QPushButton(" Add assertVisible")
+        self.add_assert_btn.setIcon(self.icon("eye.svg"))
         self.add_assert_btn.clicked.connect(lambda: self.add_step("assertVisible"))
         btn_layout.addWidget(self.add_assert_btn)
 
-        self.add_back_btn = QPushButton("Add back")
+        self.add_back_btn = QPushButton(" Add back")
+        self.add_back_btn.setIcon(self.icon("arrow-left.svg"))
         self.add_back_btn.clicked.connect(lambda: self.add_step("back"))
         btn_layout.addWidget(self.add_back_btn)
 
@@ -120,7 +128,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Step Editor:"))
         layout.addWidget(self.editor_widget)
 
-        self.run_btn = QPushButton("\uf04b  Run Maestro")
+        self.run_btn = QPushButton(" Run Maestro")
+        self.run_btn.setIcon(self.icon("circle-play.svg"))
         self.run_btn.clicked.connect(self.run_maestro)
         layout.addWidget(self.run_btn)
 
@@ -428,3 +437,6 @@ class MainWindow(QMainWindow):
             self.log_view.append_line("✅ Finished successfully")
         else:
             self.log_view.append_line(f"❌ Finished with code {code}")
+
+    def icon(self, name):
+        return QIcon(os.path.join(os.path.dirname(__file__), "icons", name))
