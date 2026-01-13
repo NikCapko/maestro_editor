@@ -8,7 +8,7 @@ class AssertVisibleEditor(QWidget):
 
         self.id_input = QLineEdit()
         self.id_input.setText(step.params.get("id", ""))
-        self.id_input.setPlaceholderText("ID (приоритет)")
+        self.id_input.setPlaceholderText("ID")
 
         self.text_input = QLineEdit()
         self.text_input.setText(step.params.get("text", ""))

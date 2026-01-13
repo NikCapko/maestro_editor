@@ -5,5 +5,5 @@ class BackEditor(QWidget):
     def __init__(self, step):
         super().__init__()
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Back - to previos screen"))
+        layout.addWidget(QLabel("Back - go to previos screen"))
         self.setLayout(layout)
