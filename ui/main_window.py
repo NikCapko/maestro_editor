@@ -54,6 +54,26 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Tests:"))
         layout.addWidget(self.test_list_widget)
 
+        # ==== Buttons ====
+        btn_layout = QHBoxLayout()
+        layout.addLayout(btn_layout)
+
+        self.open_project_btn = QPushButton("Open Project")
+        self.open_project_btn.clicked.connect(self.open_project)
+        btn_layout.addWidget(self.open_project_btn)
+
+        self.new_test_btn = QPushButton("New Test")
+        self.new_test_btn.clicked.connect(self.new_test)
+        btn_layout.addWidget(self.new_test_btn)
+
+        self.delete_test_btn = QPushButton("Delete Test")
+        self.delete_test_btn.clicked.connect(self.delete_test)
+        btn_layout.addWidget(self.delete_test_btn)
+
+        self.save_btn = QPushButton("Save YAML")
+        self.save_btn.clicked.connect(self.save_current_test)
+        btn_layout.addWidget(self.save_btn)
+
         # ==== Список шагов ====
         self.step_list = QListWidget()
         self.step_list.itemClicked.connect(self.on_step_selected)
@@ -61,6 +81,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.step_list)
 
         btn_layout = QHBoxLayout()
+        layout.addLayout(btn_layout)
 
         self.add_launch_btn = QPushButton("Add launchApp")
         self.add_launch_btn.clicked.connect(lambda: self.add_step("launchApp"))
@@ -91,8 +112,6 @@ class MainWindow(QMainWindow):
         self.delete_step_btn.clicked.connect(self.delete_selected_step)
         btn_layout.addWidget(self.delete_step_btn)
 
-        layout.addLayout(btn_layout)
-
         # ==== Editor panel ====
         self.editor_widget = QWidget()
         self.editor_layout = QVBoxLayout()
@@ -112,22 +131,6 @@ class MainWindow(QMainWindow):
         # self.yaml_preview.textChanged.connect(self.on_yaml_edited)
         layout.addWidget(QLabel("Live YAML Preview:"))
         layout.addWidget(self.yaml_preview)
-
-        # ==== Buttons ====
-        btn_layout = QHBoxLayout()
-        layout.addLayout(btn_layout)
-
-        self.open_project_btn = QPushButton("Open Project")
-        self.open_project_btn.clicked.connect(self.open_project)
-        btn_layout.addWidget(self.open_project_btn)
-
-        self.new_test_btn = QPushButton("New Test")
-        self.new_test_btn.clicked.connect(self.new_test)
-        btn_layout.addWidget(self.new_test_btn)
-
-        self.save_btn = QPushButton("Save YAML")
-        self.save_btn.clicked.connect(self.save_current_test)
-        btn_layout.addWidget(self.save_btn)
 
         self.log_view = LogView()
         layout.addWidget(QLabel("Maestro output:"))
@@ -173,8 +176,27 @@ class MainWindow(QMainWindow):
         if not file_name:
             return
         self.current_test_name = os.path.basename(file_name)
+        save_maestro_yaml(file_name, self.app_id_input.text(), [])
+        self.load_test_list()
         self.step_list.clear()
         self.update_yaml()
+
+    def delete_test(self):
+        if not self.confirm(
+            "Delete test", f"Удалить тест:\n\n{self.current_test_name} ?"
+        ):
+            return
+        path = os.path.join(self.tests_dir, self.current_test_name)
+        os.remove(path)
+        self.load_test_list()
+        self.step_list.clear()
+        pass
+
+    def confirm(self, title, text):
+        reply = QMessageBox.question(
+            self, title, text, QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        return reply == QMessageBox.Yes
 
     # ==== Steps methods ====
     def add_step(self, step_type):
@@ -206,6 +228,11 @@ class MainWindow(QMainWindow):
     def delete_selected_step(self):
         row = self.step_list.currentRow()
         if row < 0:
+            return
+
+        step = self.step_list.currentItem().data(1)
+
+        if not self.confirm("Delete step", f"Удалить шаг:\n\n{step.display_name()} ?"):
             return
 
         self.step_list.takeItem(row)
@@ -314,9 +341,6 @@ class MainWindow(QMainWindow):
         self.update_yaml()
 
     def on_yaml_edited(self):
-        """
-        При редактировании YAML вручную синхронизируем список шагов и appId.
-        """
         text = self.yaml_preview.toPlainText()
         try:
             docs = list(yaml.safe_load_all(text))
