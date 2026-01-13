@@ -1,9 +1,11 @@
 import os
+import sys
 
 import yaml
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -96,6 +98,13 @@ class MainWindow(QMainWindow):
         # ==== Список шагов ====
         self.step_list = QListWidget()
         self.step_list.itemClicked.connect(self.on_step_selected)
+        self.step_list.setDragEnabled(True)
+        self.step_list.setAcceptDrops(True)
+        self.step_list.setDropIndicatorShown(True)
+        self.step_list.setDefaultDropAction(Qt.MoveAction)
+        self.step_list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.step_list.setCursor(Qt.OpenHandCursor)
+        self.step_list.model().rowsMoved.connect(lambda *_: self.update_yaml())
         layout.addWidget(QLabel("Steps:"))
         layout.addWidget(self.step_list)
 
@@ -462,7 +471,7 @@ class MainWindow(QMainWindow):
             self.log_view.append_line(f"❌ Finished with code {code}")
 
     def icon(self, name):
-        return QIcon(os.path.join(os.path.dirname(__file__), "icons", name))
+        return QIcon(resource_path(f"ui/icons/{name}"))
 
     def add_shortcut(self, key, callback, tooltip_text=None, parent=None):
         if isinstance(key, QKeySequence):
@@ -478,3 +487,12 @@ class MainWindow(QMainWindow):
             return f"{tooltip_text} ({native})"
 
         return None
+
+
+def resource_path(relative_path):
+    """
+    Работает и в dev, и в PyInstaller
+    """
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
