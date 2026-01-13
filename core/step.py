@@ -24,6 +24,8 @@ class MaestroStep:
             parts.append(f"id={self.params['id']}")
         if "text" in self.params:
             parts.append(f"text={self.params['text']}")
+        if "point" in self.params:
+            parts.append(f"point={self.params['point']}")
 
         return f"{self.step_type} ({', '.join(parts)})"
 

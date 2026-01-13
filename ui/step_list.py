@@ -1,4 +1,3 @@
-from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 
 from core.step import MaestroStep
