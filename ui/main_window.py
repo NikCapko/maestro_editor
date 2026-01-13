@@ -2,7 +2,7 @@ import os
 
 import yaml
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QShortcut,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -68,15 +69,28 @@ class MainWindow(QMainWindow):
         self.new_test_btn = QPushButton(" New Test")
         self.new_test_btn.setIcon(self.icon("file.svg"))
         self.new_test_btn.clicked.connect(self.new_test)
+        tooltip = self.add_shortcut(QKeySequence.New, self.new_test, "New test")
+        self.new_test_btn.setToolTip(tooltip)
         btn_layout.addWidget(self.new_test_btn)
 
         self.delete_test_btn = QPushButton("\uf1f8  Delete Test")
         self.delete_test_btn.clicked.connect(self.delete_test)
+        tooltip = self.add_shortcut(
+            key=QKeySequence.Delete,
+            callback=self.delete_test,
+            tooltip_text="Delete test",
+            parent=self.test_list_widget,
+        )
+        self.delete_test_btn.setToolTip(tooltip)
         btn_layout.addWidget(self.delete_test_btn)
 
         self.save_btn = QPushButton(" Save YAML")
         self.save_btn.setIcon(self.icon("floppy-disk.svg"))
         self.save_btn.clicked.connect(self.save_current_test)
+        tooltip = self.add_shortcut(
+            QKeySequence.Save, self.save_current_test, "Save test"
+        )
+        self.save_btn.setToolTip(tooltip)
         btn_layout.addWidget(self.save_btn)
 
         # ==== Список шагов ====
@@ -119,6 +133,13 @@ class MainWindow(QMainWindow):
         self.delete_step_btn = QPushButton("\uf1f8  Delete step")
         self.delete_step_btn.setEnabled(False)
         self.delete_step_btn.clicked.connect(self.delete_selected_step)
+        tooltip = self.add_shortcut(
+            QKeySequence.Delete,
+            self.delete_selected_step,
+            "Delete step",
+            parent=self.step_list,
+        )
+        self.delete_step_btn.setToolTip(tooltip)
         btn_layout.addWidget(self.delete_step_btn)
 
         # ==== Editor panel ====
@@ -131,6 +152,8 @@ class MainWindow(QMainWindow):
         self.run_btn = QPushButton(" Run Maestro")
         self.run_btn.setIcon(self.icon("circle-play.svg"))
         self.run_btn.clicked.connect(self.run_maestro)
+        tooltip = self.add_shortcut("Ctrl+R", self.run_maestro, "Run test")
+        self.run_btn.setToolTip(tooltip)
         layout.addWidget(self.run_btn)
 
         # ==== Live YAML preview ====
@@ -440,3 +463,18 @@ class MainWindow(QMainWindow):
 
     def icon(self, name):
         return QIcon(os.path.join(os.path.dirname(__file__), "icons", name))
+
+    def add_shortcut(self, key, callback, tooltip_text=None, parent=None):
+        if isinstance(key, QKeySequence):
+            sequence = key
+        else:
+            sequence = QKeySequence(key)
+
+        shortcut = QShortcut(sequence, parent or self)
+        shortcut.activated.connect(callback)
+
+        if tooltip_text:
+            native = sequence.toString(QKeySequence.NativeText)
+            return f"{tooltip_text} ({native})"
+
+        return None
