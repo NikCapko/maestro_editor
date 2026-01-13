@@ -1,6 +1,7 @@
 import os
 
 import yaml
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -175,11 +176,18 @@ class MainWindow(QMainWindow):
         )
         if not file_name:
             return
+
+        # если расширения нет — добавляем .yaml
+        if not file_name.lower().endswith((".yaml", ".yml")):
+            file_name += ".yaml"
+
         self.current_test_name = os.path.basename(file_name)
         save_maestro_yaml(file_name, self.app_id_input.text(), [])
         self.load_test_list()
-        self.step_list.clear()
-        self.update_yaml()
+        items = self.test_list_widget.findItems(self.current_test_name, Qt.MatchExactly)
+        if items:
+            self.test_list_widget.setCurrentItem(items[0])
+            self.on_test_selected(items[0])
 
     def delete_test(self):
         if not self.confirm(
@@ -242,7 +250,6 @@ class MainWindow(QMainWindow):
         if count == 0:
             # шагов больше нет
             self.clear_editor()
-            self.clear_runflow_preview()
             self.delete_step_btn.setEnabled(False)
             self.update_yaml()
             return
